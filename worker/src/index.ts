@@ -1,4 +1,5 @@
 import { performClip, fetchPageHtml, type ClipResult } from "./clip";
+import { openApiSpec, SWAGGER_UI_HTML } from "./openapi";
 import {
   exchangeOAuthCode,
   getDatabase,
@@ -33,7 +34,7 @@ const DEFAULT_NOTION_VERSION = "2022-06-28";
 
 const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
@@ -54,6 +55,17 @@ export async function handleRequest(
   }
 
   const { pathname } = new URL(request.url);
+
+  // API docs (OpenAPI spec + Swagger UI) — served without auth.
+  if (request.method === "GET" && pathname === "/openapi.json") {
+    return jsonResponse(openApiSpec);
+  }
+  if (request.method === "GET" && (pathname === "/docs" || pathname === "/")) {
+    return new Response(SWAGGER_UI_HTML, {
+      status: 200,
+      headers: { "Content-Type": "text/html; charset=utf-8", ...CORS_HEADERS },
+    });
+  }
 
   try {
     if (request.method === "POST" && pathname === "/oauth/exchange") {

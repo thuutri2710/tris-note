@@ -49,6 +49,29 @@ describe("performClip", () => {
     expect(types).toContain("paragraph");
   });
 
+  it("writes a plain note into a matching DB property and skips the callout", async () => {
+    const deps = makeDeps({
+      getDatabase: vi.fn(async () => ({
+        properties: {
+          Name: { type: "title" },
+          Link: { type: "url" },
+          Notes: { type: "rich_text" },
+        },
+      })),
+    });
+    await performClip(deps, {
+      databaseId: "db1",
+      title: "T",
+      url: "https://site.test/post",
+      note: "remember this",
+    });
+    const createArg = (deps.createPage as any).mock.calls[0][0];
+    expect(createArg.properties.Notes).toEqual({
+      rich_text: [{ text: { content: "remember this" } }],
+    });
+    expect(createArg.children.some((b: any) => b.type === "callout")).toBe(false);
+  });
+
   it("converts a markdown note into Notion blocks instead of a callout", async () => {
     const deps = makeDeps();
     await performClip(deps, {

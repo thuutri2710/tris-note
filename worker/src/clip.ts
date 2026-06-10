@@ -88,14 +88,26 @@ export async function performClip(
     : [];
 
   const noteBlocks = params.noteMarkdown ? markdownToBlocks(params.note) : [];
+  // Plain notes go into a matching DB property (visible in the table) when one
+  // exists; markdown notes always render as body blocks.
+  const noteInProperty =
+    !params.noteMarkdown &&
+    analysis.noteProp !== null &&
+    params.note.trim() !== "";
 
-  const properties = buildPageProperties(title, params.url, analysis);
+  const properties = buildPageProperties(
+    title,
+    params.url,
+    noteInProperty ? params.note : "",
+    analysis,
+  );
   const children = buildClipChildren({
     url: params.url,
     note: params.note,
     hasUrlProperty: analysis.urlProp !== null,
     contentBlocks,
     noteBlocks,
+    noteInProperty,
   });
 
   const firstBatch = children.slice(0, MAX_CHILDREN_PER_CREATE);

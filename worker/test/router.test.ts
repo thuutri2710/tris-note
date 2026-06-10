@@ -99,6 +99,26 @@ describe("handleRequest", () => {
     expect(res.status).toBe(404);
   });
 
+  it("serves the OpenAPI spec at GET /openapi.json", async () => {
+    const req = new Request("https://worker.test/openapi.json");
+    const res = await handleRequest(req, ENV, deps());
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("application/json");
+    const spec = await res.json();
+    expect(spec.openapi).toBe("3.0.3");
+    expect(Object.keys(spec.paths)).toEqual(
+      expect.arrayContaining(["/oauth/exchange", "/clip"]),
+    );
+  });
+
+  it("serves Swagger UI HTML at GET /docs", async () => {
+    const req = new Request("https://worker.test/docs");
+    const res = await handleRequest(req, ENV, deps());
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/html");
+    expect(await res.text()).toContain("swagger-ui");
+  });
+
   it("maps an upstream Notion error status to the response", async () => {
     const failing = deps({
       clip: vi.fn(async () => {

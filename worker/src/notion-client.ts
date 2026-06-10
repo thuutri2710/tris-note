@@ -1,24 +1,33 @@
 export type DatabaseAnalysis = {
   titleProp: string;
   urlProp: string | null;
+  noteProp: string | null;
 };
+
+// A rich_text property the note can be written into so it shows in the table.
+const NOTE_PROP_RE = /^(note|notes|comment|comments|description|summary)$/i;
 
 export function analyzeDatabase(db: any): DatabaseAnalysis {
   const properties: Record<string, { type?: string }> = db?.properties ?? {};
   let titleProp: string | null = null;
   let urlProp: string | null = null;
+  let noteProp: string | null = null;
 
   for (const [name, prop] of Object.entries(properties)) {
     if (prop?.type === "title" && titleProp === null) titleProp = name;
     if (prop?.type === "url" && urlProp === null) urlProp = name;
+    if (prop?.type === "rich_text" && noteProp === null && NOTE_PROP_RE.test(name)) {
+      noteProp = name;
+    }
   }
 
-  return { titleProp: titleProp ?? "title", urlProp };
+  return { titleProp: titleProp ?? "title", urlProp, noteProp };
 }
 
 export function buildPageProperties(
   title: string,
   url: string,
+  note: string,
   analysis: DatabaseAnalysis,
 ): Record<string, unknown> {
   const properties: Record<string, unknown> = {
@@ -26,6 +35,11 @@ export function buildPageProperties(
   };
   if (analysis.urlProp) {
     properties[analysis.urlProp] = { url };
+  }
+  if (analysis.noteProp && note.trim()) {
+    properties[analysis.noteProp] = {
+      rich_text: [{ text: { content: note } }],
+    };
   }
   return properties;
 }
@@ -38,6 +52,9 @@ export function buildClipChildren(params: {
   /** Pre-built blocks for a markdown note; when present, used instead of the
    * plain callout. */
   noteBlocks?: any[];
+  /** True when the note was already written to a database property, so the
+   * body callout is skipped to avoid duplication. */
+  noteInProperty?: boolean;
 }): any[] {
   const children: any[] = [];
 
@@ -51,7 +68,7 @@ export function buildClipChildren(params: {
 
   if (params.noteBlocks && params.noteBlocks.length > 0) {
     children.push(...params.noteBlocks);
-  } else if (params.note.trim()) {
+  } else if (!params.noteInProperty && params.note.trim()) {
     children.push({
       object: "block",
       type: "callout",

@@ -60,6 +60,7 @@ describe("analyzeDatabase", () => {
     expect(analyzeDatabase(db)).toEqual({
       titleProp: "Name",
       urlProp: "Link",
+      noteProp: null,
     });
   });
 
@@ -72,6 +73,22 @@ describe("analyzeDatabase", () => {
     expect(analyzeDatabase(db)).toEqual({
       titleProp: "Title",
       urlProp: null,
+      noteProp: null,
+    });
+  });
+
+  it("finds a rich_text property named like a note", () => {
+    const db = {
+      properties: {
+        Name: { id: "title", type: "title" },
+        Notes: { id: "n", type: "rich_text" },
+        Other: { id: "o", type: "rich_text" },
+      },
+    };
+    expect(analyzeDatabase(db)).toEqual({
+      titleProp: "Name",
+      urlProp: null,
+      noteProp: "Notes",
     });
   });
 
@@ -80,15 +97,17 @@ describe("analyzeDatabase", () => {
     expect(analyzeDatabase(db)).toEqual({
       titleProp: "title",
       urlProp: null,
+      noteProp: null,
     });
   });
 });
 
 describe("buildPageProperties", () => {
   it("sets the title property and the url property when available", () => {
-    const props = buildPageProperties("My Title", "https://x.test", {
+    const props = buildPageProperties("My Title", "https://x.test", "", {
       titleProp: "Name",
       urlProp: "Link",
+      noteProp: null,
     });
     expect(props).toEqual({
       Name: { title: [{ text: { content: "My Title" } }] },
@@ -97,12 +116,25 @@ describe("buildPageProperties", () => {
   });
 
   it("omits the url property when the database has none", () => {
-    const props = buildPageProperties("My Title", "https://x.test", {
+    const props = buildPageProperties("My Title", "https://x.test", "", {
       titleProp: "Name",
       urlProp: null,
+      noteProp: null,
     });
     expect(props).toEqual({
       Name: { title: [{ text: { content: "My Title" } }] },
+    });
+  });
+
+  it("writes the note into the note property when one exists", () => {
+    const props = buildPageProperties("My Title", "https://x.test", "remember", {
+      titleProp: "Name",
+      urlProp: null,
+      noteProp: "Notes",
+    });
+    expect(props).toEqual({
+      Name: { title: [{ text: { content: "My Title" } }] },
+      Notes: { rich_text: [{ text: { content: "remember" } }] },
     });
   });
 });
@@ -149,6 +181,18 @@ describe("buildClipChildren", () => {
       },
     });
     expect(children).toHaveLength(2);
+  });
+
+  it("skips the body callout when the note was written to a property", () => {
+    const children = buildClipChildren({
+      url: "https://x.test",
+      note: "remember this",
+      hasUrlProperty: true,
+      contentBlocks: [{ object: "block", type: "paragraph", paragraph: {} }],
+      noteInProperty: true,
+    });
+    expect(children.some((b: any) => b.type === "callout")).toBe(false);
+    expect(children).toHaveLength(1);
   });
 });
 
