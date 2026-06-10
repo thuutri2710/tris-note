@@ -36,7 +36,10 @@ Two components:
 
 ### 1. Chrome MV3 Extension (`/extension`)
 
-- **Popup** — mirrors the official clipper layout:
+Built with **Svelte + Vite + the CRXJS Vite plugin** (TypeScript). CRXJS gives
+MV3-aware bundling and hot-module reload for the popup during development.
+
+- **Popup** (Svelte components) — mirrors the official clipper layout:
   - Editable **Title** field (pre-filled from the tab title).
   - Optional **Note** field (user free-text).
   - **Save page** button (Enter submits).
@@ -138,19 +141,44 @@ flow adds another `connection`.
   - `/clip`: happy path (mocked fetch + mocked Notion API) and
     extraction-failure path (asserts bookmark fallback).
   - `/oauth/exchange`: success and Notion-error responses (mocked).
-- **Extension:** unit-test pure logic — storage helpers, destination-state
-  reducer, message payload shapes. Manual checklist for the live OAuth flow and
-  popup rendering.
+- **Extension:**
+  - Pure logic (vitest): storage helpers, destination-state reducer, message
+    payload shapes.
+  - Svelte components (`vitest` + `@testing-library/svelte` + jsdom): popup
+    renders fields, Save dispatches the right message, success/error/fallback
+    states.
+  - Manual checklist for the live OAuth flow and end-to-end clip (hard to fully
+    automate).
 - TDD throughout: tests written before implementation.
+
+## Development & Testing Guide
+
+A `DEVELOPMENT.md` (written during implementation) will document how to run and
+test the project locally:
+
+- **Worker:** `wrangler dev` to run locally; `vitest` for unit tests; how to set
+  secrets (`wrangler secret put`) and point the extension at the local Worker.
+- **Extension:** `pnpm dev` (Vite + CRXJS) for an HMR build; how to load the
+  unpacked extension from `dist/` in `chrome://extensions`; how to find the
+  extension ID and register the OAuth redirect URI.
+- **OAuth setup walkthrough:** creating the Notion public integration, the
+  one-time config, and connecting a workspace.
+- **Manual test checklist:** connect, list databases, clip a normal article,
+  clip a logged-in/SPA page (verify bookmark fallback), clip with a note, switch
+  workspaces, re-connect after token revocation.
+- **Running the automated tests:** commands for Worker tests and extension
+  tests, and what each covers.
 
 ## Project Layout
 
 ```
 /extension
-  manifest.json
-  popup/            popup UI (html/css/js)
-  background/       service worker (oauth, notion list, clip dispatch)
-  lib/              storage helpers, message types, pure logic
+  manifest.config.ts   MV3 manifest (CRXJS, typed)
+  vite.config.ts       Vite + CRXJS + Svelte
+  src/
+    popup/             Svelte popup (App.svelte, components, popup.html)
+    background/        service worker (oauth, notion list, clip dispatch)
+    lib/               storage helpers, message types, pure logic
 /worker
   src/
     index.js        router
@@ -167,13 +195,30 @@ flow adds another `connection`.
 
 ## One-Time Setup (documented for the user)
 
-1. Create a Notion **public** integration → obtain `client_id` and
-   `client_secret`; set the redirect URI to
-   `https://<extension-id>.chromiumapp.org/`.
-2. Configure the extension's `client_id` and Worker URL.
-3. `wrangler secret put NOTION_CLIENT_SECRET` (and `NOTION_CLIENT_ID`); deploy
-   the Worker with `wrangler deploy`.
-4. Load the unpacked extension in Chrome; click **Connect**.
+A **single** Notion public integration serves both dev and production. A Notion
+integration can register **multiple redirect URIs**, so both environments share
+one `client_id` / `client_secret` and differ only by which redirect URI is used.
+
+1. **Pin the dev extension ID** so the dev redirect URI stays stable across
+   reloads/machines: add a `key` (public key from a generated keypair) to the
+   MV3 manifest via `manifest.config.ts`. Chrome derives a deterministic ID from
+   it. Confirm the resulting redirect URI at runtime with
+   `chrome.identity.getRedirectURL()` (returns
+   `https://<extension-id>.chromiumapp.org/`).
+2. Create a Notion **public** integration → obtain `client_id` and
+   `client_secret`. Register **both** redirect URIs on it:
+   - dev: `https://<dev-extension-id>.chromiumapp.org/`
+   - prod: `https://<prod-extension-id>.chromiumapp.org/` (the prod ID is the
+     permanent ID assigned on Chrome Web Store publish — add this URI once known).
+3. Configure the extension's `client_id` and Worker URL.
+4. `wrangler secret put NOTION_CLIENT_SECRET` (and `NOTION_CLIENT_ID`) for each
+   Worker environment (the same secret value, since one integration); deploy the
+   Worker with `wrangler deploy`.
+5. Load the unpacked extension in Chrome; click **Connect**.
+
+> Note: one shared integration means dev testing and prod use the same OAuth
+> credentials and token store scope. If this build is later shared with others,
+> revisit splitting into separate dev/prod integrations for isolation.
 
 ## Open Questions / Future Enhancements
 

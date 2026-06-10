@@ -1,0 +1,23 @@
+{
+  "name": "notion-web-clipper-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@mozilla/readability": "^0.5.0",
+    "linkedom": "^0.18.5",
+    "marked": "^14.1.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260609.1",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0",
+    "wrangler": "^4.0.0"
+  }
+}
