@@ -29,6 +29,17 @@ npx wrangler secret put NOTION_CLIENT_SECRET
 npx wrangler deploy
 ```
 
+### API docs (Swagger / OpenAPI)
+
+With the Worker running, open:
+
+- **Swagger UI:** http://localhost:8787/docs (also served at `/`)
+- **OpenAPI spec (JSON):** http://localhost:8787/openapi.json
+
+The spec lives in `worker/src/openapi.ts` and documents `POST /oauth/exchange`
+and `POST /clip` (request/response schemas and error shapes). You can import
+`/openapi.json` into Postman/Insomnia or generate clients from it.
+
 ## Extension
 
 ```bash
