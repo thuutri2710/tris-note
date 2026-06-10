@@ -1,0 +1,12 @@
+name = "notion-web-clipper-worker"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Secrets (set via `wrangler secret put`):
+#   NOTION_CLIENT_ID
+#   NOTION_CLIENT_SECRET
+#
+# Vars (non-secret) can go here:
+# [vars]
+# NOTION_VERSION = "2022-06-28"

@@ -1,0 +1,5 @@
+# Copy to `.dev.vars` for local `wrangler dev`. Do NOT commit `.dev.vars`.
+# In production these are set with `wrangler secret put <NAME>`.
+NOTION_CLIENT_ID="your-notion-oauth-client-id"
+NOTION_CLIENT_SECRET="your-notion-oauth-client-secret"
+NOTION_VERSION="2022-06-28"

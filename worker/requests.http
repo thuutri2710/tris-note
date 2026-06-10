@@ -1,0 +1,67 @@
+### Notion Web Clipper Worker — sample requests
+#
+# Run the Worker locally first:
+#   cd worker
+#   pnpm dev                # serves http://localhost:8787
+#
+# These work with the REST Client (VS Code) or JetBrains HTTP client.
+# `wrangler dev` reads secrets from .dev.vars (NOTION_CLIENT_ID / NOTION_CLIENT_SECRET).
+
+@base = http://localhost:8787
+
+### 1. CORS preflight (what the extension's browser sends first)
+OPTIONS {{base}}/clip
+Origin: chrome-extension://abcdefghijklmnop
+
+### 2. OAuth token exchange
+# `code` is the value Notion appends to the redirect after the user authorizes.
+# `redirectUri` must match the one registered on the integration.
+POST {{base}}/oauth/exchange
+Content-Type: application/json
+
+{
+  "code": "PASTE_OAUTH_CODE_HERE",
+  "redirectUri": "https://abcdefghijklmnop.chromiumapp.org/"
+}
+
+### 3. Clip a page (article with extractable content)
+# `accessToken` is the access_token returned by /oauth/exchange.
+# `databaseId` is the id of a database shared with the integration.
+POST {{base}}/clip
+Content-Type: application/json
+
+{
+  "accessToken": "secret_PASTE_NOTION_ACCESS_TOKEN",
+  "databaseId": "PASTE_DATABASE_ID",
+  "title": "Example Domain",
+  "url": "https://example.com/",
+  "note": "Saved from the sample HTTP test"
+}
+
+### 4. Clip a page that won't extract (exercises the bookmark fallback)
+# A login-gated / SPA URL returns no readable content, so the Worker still
+# creates the page from title + url + note and responds with "fallback": true.
+POST {{base}}/clip
+Content-Type: application/json
+
+{
+  "accessToken": "secret_PASTE_NOTION_ACCESS_TOKEN",
+  "databaseId": "PASTE_DATABASE_ID",
+  "title": "My dashboard",
+  "url": "https://app.example.com/private/dashboard",
+  "note": ""
+}
+
+### 5. Validation error — missing required fields → 400
+POST {{base}}/clip
+Content-Type: application/json
+
+{
+  "accessToken": "secret_PASTE_NOTION_ACCESS_TOKEN"
+}
+
+### 6. Unknown route → 404
+POST {{base}}/nope
+Content-Type: application/json
+
+{}
